@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Confessly – Send Anonymous Message</title>
+<meta name="description" content="Send an anonymous confession, crush, advice, compliment or question. No tracking, no identity." />
+<meta name="theme-color" content="#07070d" />
+<style>
+  /* ============ RESET + TOKENS ============ */
+  *,*::before,*::after{box-sizing:border-box}
+
+  :root{
+    --bg:#07070d;
+    --bg-2:#0b0b14;
+    --glass:rgba(255,255,255,.055);
+    --glass-strong:rgba(255,255,255,.09);
+    --stroke:rgba(255,255,255,.10);
+    --stroke-hot:rgba(168,85,247,.55);
+    --text:#f1f0f7;
+    --muted:#8e8ca3;
+    --violet:#a855f7;
+    --pink:#ec4899;
+    --cyan:#22d3ee;
+    --lime:#a3e635;
+    --ok:#34d399;
+    --err:#fb7185;
+    --r:22px;
+    --shadow:0 24px 70px -20px rgba(0,0,0,.85);
+  }
+
+  html{color-scheme:dark}
+
+  body{
+    margin:0;
+    min-height:100dvh;
+    background:
+      radial-gradient(1100px 620px at 50% -14%, rgba(168,85,247,.22), transparent 62%),
+      radial-gradient(900px 520px at 6% 18%, rgba(34,211,238,.10), transparent 60%),
+      radial-gradient(820px 520px at 96% 26%, rgba(236,72,153,.13), transparent 60%),
+      linear-gradient(180deg, var(--bg), var(--bg-2) 55%, var(--bg));
+    color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,Arial,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    padding:34px 16px 72px;
+    overflow-x:hidden;
+  }
+
+  /* subtle grid overlay for the cyberpunk feel */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+    background-size:56px 56px;
+    mask-image:radial-gradient(circle at 50% 20%, #000 0%, transparent 78%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .wrap{position:relative; z-index:1; max-width:640px; margin:0 auto}
+
+  /* ============ HEADER ============ */
+  .brand{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    font-size:11.5px; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:22px;
+  }
+  .brand .spark{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--ok);
+    box-shadow:0 0 12px var(--ok), 0 0 26px rgba(52,211,153,.45);
+    animation:pulse 2.6s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+
+  .headline{
+    text-align:center;
+    margin:0 0 10px;
+    font-size:clamp(23px,5.4vw,31px);
+    line-height:1.22;
+    letter-spacing:-.02em;
+    font-weight:750;
+  }
+  .headline .handle{
+    background:linear-gradient(96deg,var(--violet),var(--pink) 55%,var(--cyan));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    white-space:nowrap;
+  }
+
+  .subhead{
+    text-align:center;
+    margin:0 auto 26px;
+    max-width:38ch;
+    font-size:14px;
+    color:var(--muted);
+  }
+  .subhead b{color:#cfcbdd;font-weight:600}
+
+  /* ============ GLASS CARD ============ */
+  .glass{
+    background:linear-gradient(158deg, var(--glass-strong), var(--glass));
+    border:1px solid var(--stroke);
+    border-radius:var(--r);
+    backdrop-filter:blur(22px) saturate(150%);
+    -webkit-backdrop-filter:blur(22px) saturate(150%);
+    box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.07);
+  }
+
+  /* ============ COMPOSER ============ */
+  .composer{padding:22px 20px 20px; margin-bottom:30px}
+
+  .field-label{
+    display:block;
+    font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 11px;
+  }
+
+  /* ---- category chips = the sample's main "fields" ---- */
+  .cats{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin-bottom:20px;
+  }
+
+  .cat{
+    display:inline-flex; align-items:center; gap:6px;
+    font:inherit; font-size:13px; font-weight:650;
+    padding:8px 14px;
+    border-radius:999px;
+    border:1px solid var(--stroke);
+    background:rgba(255,255,255,.035);
+    color:#b9b5cc;
+    cursor:pointer;
+    transition:transform .12s, background .16s, border-color .16s, color .16s, box-shadow .16s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .cat:hover{border-color:rgba(255,255,255,.24); color:#fff; transform:translateY(-1px)}
+  .cat:active{transform:translateY(0) scale(.98)}
+
+  .cat[aria-pressed="true"]{
+    color:#0a0612;
+    border-color:transparent;
+    background:linear-gradient(100deg,var(--violet),var(--pink));
+    box-shadow:0 6px 22px -6px rgba(168,85,247,.75), 0 0 0 1px rgba(255,255,255,.18) inset;
+  }
+  .cat[data-cat="crush"][aria-pressed="true"]{background:linear-gradient(100deg,var(--pink),#f43f5e)}
+  .cat[data-cat="advice"][aria-pressed="true"]{background:linear-gradient(100deg,var(--cyan),#3b82f6)}
+  .cat[data-cat="compliment"][aria-pressed="true"]{background:linear-gradient(100deg,var(--lime),var(--ok))}
+  .cat[data-cat="question"][aria-pressed="true"]{background:linear-gradient(100deg,#fbbf24,#f97316)}
+
+  /* ---- textarea ---- */
+  .msg-wrap{position:relative}
+
+  textarea{
+    display:block;
+    width:100%;
+    min-height:158px;
+    resize:vertical;
+    padding:15px 16px 40px;
+    font:inherit;
+    font-size:15.5px;
+    line-height:1.6;
+    color:var(--text);
+    background:rgba(0,0,0,.32);
+    border:1px solid var(--stroke);
+    border-radius:16px;
+    transition:border-color .16s, box-shadow .16s, background .16s;
+  }
+  textarea::placeholder{color:#6d6a80}
+  textarea:focus{
+    outline:none;
+    border-color:var(--stroke-hot);
+    background:rgba(0,0,0,.44);
+    box-shadow:0 0 0 3.5px rgba(168,85,247,.16);
+  }
+
+  .counter{
+    position:absolute;
+    right:13px; bottom:11px;
+    font-size:11.5px;
+    font-variant-numeric:tabular-nums;
+    color:#6d6a80;
+    pointer-events:none;
+    transition:color .16s;
+  }
+  .counter.warn{color:#fbbf24}
+  .counter.over{color:var(--err); font-weight:700}
+
+  /* ---- privacy note ---- */
+  .privacy{
+    display:flex; align-items:flex-start; gap:10px;
+    margin:15px 0 0;
+    padding:12px 14px;
+    border-radius:13px;
+    background:rgba(52,211,153,.055);
+    border:1px solid rgba(52,211,153,.20);
+    font-size:12.8px;
+    color:#b8f0dc;
+    line-height:1.5;
+  }
+  .privacy svg{flex:none; margin-top:1px}
+  .privacy b{color:#fff; font-weight:650}
+
+  /* ---- submit ---- */
+  .send{
+    position:relative;
+    width:100%;
+    margin-top:16px;
+    padding:15px 20px;
+    font:inherit;
+    font-size:15px;
+    font-weight:750;
+    letter-spacing:.01em;
+    color:#0a0612;
+    background:linear-gradient(100deg,var(--violet),var(--pink) 70%,#f472b6);
+    border:0;
+    border-radius:15px;
+    cursor:pointer;
+    overflow:hidden;
+    transition:filter .16s, transform .12s, opacity .16s;
+    box-shadow:0 14px 40px -14px rgba(236,72,153,.7);
+  }
+  .send:hover:not(:disabled){filter:brightness(1.09) saturate(1.05)}
+  .send:active:not(:disabled){transform:translateY(1px)}
+  .send:disabled{opacity:.55; cursor:not-allowed; box-shadow:none}
+
+  /* honeypot */
+  .hp{position:absolute; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none}
+
+  /* ============ FEED ============ */
+  .feed-bar{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:12px; margin:0 2px 13px;
+  }
+  .feed-bar h2{
+    margin:0;
+    font-size:13px; font-weight:750; letter-spacing:.13em; text-transform:uppercase;
+    color:#cfcbdd;
+  }
+  .feed-bar span{font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+
+  .feed{display:grid; gap:11px}
+
+  .post{
+    position:relative;
+    padding:17px 18px 15px;
+    border-radius:18px;
+    background:linear-gradient(158deg, rgba(255,255,255,.065), rgba(255,255,255,.028));
+    border:1px solid var(--stroke);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    animation:rise .34s cubic-bezier(.2,.8,.3,1) both;
+    overflow:hidden;
+  }
+  .post::before{
+    content:"";
+    position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:linear-gradient(180deg,var(--violet),var(--pink));
+    opacity:.85;
+  }
+  @keyframes rise{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+
+  .post p{
+    margin:0;
+    font-size:15px;
+    line-height:1.6;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+    color:#e9e7f1;
+  }
+
+  .post footer{
+    display:flex; align-items:center; flex-wrap:wrap; gap:8px;
+    margin-top:11px;
+    font-size:11.5px;
+    color:var(--muted);
+  }
+
+  .badge{
+    font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+    padding:3.5px 9px;
+    border-radius:999px;
+    border:1px solid rgba(168,85,247,.35);
+    background:rgba(168,85,247,.13);
+    color:#d8b4fe;
+  }
+  .badge[data-t="crush"]{border-color:rgba(236,72,153,.4); background:rgba(236,72,153,.13); color:#f9a8d4}
+  .badge[data-t="advice"]{border-color:rgba(34,211,238,.4); background:rgba(34,211,238,.12); color:#a5f3fc}
+  .badge[data-t="compliment"]{border-color:rgba(163,230,53,.4); background:rgba(163,230,53,.12); color:#d9f99d}
+  .badge[data-t="question"]{border-color:rgba(251,191,36,.4); background:rgba(251,191,36,.12); color:#fde68a}
+
+  .empty{
+    text-align:center;
+    padding:44px 20px;
+    font-size:13.5px;
+    color:var(--muted);
+    border:1px dashed rgba(255,255,255,.13);
+    border-radius:18px;
+  }
+
+  /* ============ FOOTER ============ */
+  .site-foot{
+    margin-top:34px;
+    padding-top:20px;
+    border-top:1px solid rgba(255,255,255,.07);
+    text-align:center;
+    font-size:11.5px;
+    color:#6d6a80;
+    line-height:1.7;
+  }
+  .site-foot p{margin:0 0 6px}
+  .site-foot a{color:#c4b5fd; text-decoration:none; border-bottom:1px solid rgba(196,181,253,.28)}
+  .site-foot a:hover{color:#fff; border-color:#fff}
+
+  .safety{
+    margin:0 auto 16px;
+    max-width:46ch;
+    padding:12px 14px;
+    border-radius:13px;
+    background:rgba(251,113,133,.06);
+    border:1px solid rgba(251,113,133,.22);
+    color:#ffd3da;
+    font-size:12.2px;
+    text-align:left;
+  }
+  .safety strong{color:#fff}
+
+  /* ============ TOAST ============ */
+  .toast{
+    position:fixed; left:50%; bottom:20px;
+    transform:translate(-50%,150%);
+    max-width:min(92vw,420px);
+    padding:13px 18px;
+    border-radius:14px;
+    background:rgba(18,16,28,.92);
+    border:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(16px);
+    color:#f1f0f7;
+    font-size:13.5px; font-weight:600;
+    text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.7);
+    transition:transform .34s cubic-bezier(.2,.9,.3,1.15);
+    z-index:60;
+  }
+  .toast.show{transform:translate(-50%,0)}
+  .toast.ok{border-color:rgba(52,211,153,.55); box-shadow:0 20px 60px rgba(0,0,0,.7), 0 0 0 1px rgba(52,211,153,.18)}
+  .toast.err{border-color:rgba(251,113,133,.55)}
+
+  .sr-only{
+    position:absolute; width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+  }
+
+  @media (max-width:480px){
+    body{padding:26px 13px 60px}
+    .composer{padding:18px 16px 16px}
+    .cats{gap:7px}
+    .cat{font-size:12.5px; padding:7px 12px}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important; transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== HEADER ===== -->
+  <div class="brand"><span class="spark"></span> Anonymous · No tracking</div>
+
+  <h1 class="headline">
+    Send Anonymous Message to<br />
+    <span class="handle">@your_confession_point</span>
+  </h1>
+
+  <p class="subhead">
+    <b>Your anonymous message.</b> Say what you feel — your identity will remain completely anonymous.
+  </p>
+
+  <!-- ===== COMPOSER ===== -->
+  <form class="glass composer" id="form" novalidate>
+
+    <span class="field-label">Pick a category</span>
+
+    <div class="cats" id="cats" role="group" aria-label="Message category">
+      <button type="button" class="cat" data-cat="confession" aria-pressed="true">Confession</button>
+      <button type="button" class="cat" data-cat="crush" aria-pressed="false">Crush 💘</button>
+      <button type="button" class="cat" data-cat="advice" aria-pressed="false">Advice ✨</button>
+      <button type="button" class="cat" data-cat="compliment" aria-pressed="false">Compliment 💬</button>
+      <button type="button" class="cat" data-cat="question" aria-pressed="false">Question ❓</button>
+    </div>
+
+    <label class="field-label" for="message" style="margin-bottom:9px">Your message</label>
+
+    <div class="msg-wrap">
+      <textarea
+        id="message"
+        name="message"
+        maxlength="500"
+        placeholder="Say the thing you've been holding in…"
+        aria-describedby="counter privacyNote"
+        required></textarea>
+      <span class="counter" id="counter">0 / 500</span>
+    </div>
+
+    <div class="privacy" id="privacyNote">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <span><b>Your message will be completely anonymous.</b> The recipient won't know who sent it.</span>
+    </div>
+
+    <!-- honeypot -->
+    <input class="hp" type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+    <button type="submit" class="send" id="sendBtn">Send anonymous message</button>
+  </form>
+
+  <!-- ===== FEED ===== -->
+  <div class="feed-bar">
+    <h2>Recent messages</h2>
+    <span id="feedCount"></span>
+  </div>
+  <div class="feed" id="feed" aria-live="polite"></div>
+
+  <!-- ===== FOOTER ===== -->
+  <div class="site-foot">
+    <div class="safety">
+      <strong>If something here is serious</strong> — if you or someone else is being hurt, or you're having thoughts of self-harm — please talk to a trusted adult or your school counsellor. This page isn't the right place for that, and you deserve real support.
+    </div>
+    <p>Made by a student · Messages are reviewed before posting.</p>
+    <p>Anonymous by design — <a href="#" id="igLink">DM on Instagram</a> for anything else.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* =========================================================
+   1. CONFIG — edit these
+   ========================================================= */
+
+const CONFIG = {
+  // formspree.io → New Form → copy endpoint
+  formEndpoint: "https://formspree.io/f/YOUR_FORM_ID",
+
+  // your instagram
+  instagram: "https://instagram.com/your_handle",
+
+  // your display handle in the headline
+  handle: "@your_confession_point",
+
+  maxLength: 500
+};
+
+/* =========================================================
+   2. FEED DATA — add approved messages here
+   ---------------------------------------------------------
+   { text, cat, date }
+   cat: "confession" | "crush" | "advice" | "compliment" | "question"
+   ========================================================= */
+
+const CONFESSIONS = [
+  {
+    text: "I've walked past my crush's classroom three extra times a day for two months and I still haven't said a single word to them.",
+    cat: "crush",
+    date: "2026-11-01"
+  },
+  {
+    text: "I pretend to hate the canteen food but I genuinely look forward to it every single day.",
+    cat: "confession",
+    date: "2026-10-30"
+  },
+  {
+    text: "To whoever returned my lost wallet with all the cash inside — I hope you get everything you want in life.",
+    cat: "compliment",
+    date: "2026-10-28"
+  }
+];
+
+/* =========================================================
+   3. APP
+   ========================================================= */
+
+const $ = (id) => document.getElementById(id);
+const form = $("form");
+const textarea = $("message");
+const counter = $("counter");
+const sendBtn = $("sendBtn");
+const toastEl = $("toast");
+const feed = $("feed");
+let activeCat = "confession";
+
+/* ---- escape ---- */
+function esc(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/* ---- date ---- */
+function fmtDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d)) return "";
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return days + "d ago";
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+/* ---- toast ---- */
+let toastTimer;
+function toast(msg, type = "") {
+  toastEl.textContent = msg;
+  toastEl.className = "toast show " + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.className = "toast " + type; }, 4200);
+}
+
+/* ---- category chips ---- */
+$("cats").addEventListener("click", (e) => {
+  const btn = e.target.closest(".cat");
+  if (!btn) return;
+  activeCat = btn.dataset.cat;
+  [...$("cats").children].forEach((b) =>
+    b.setAttribute("aria-pressed", String(b === btn))
+  );
+  // filter the feed live
+  render();
+});
+
+/* ---- character counter ---- */
+textarea.addEventListener("input", () => {
+  const n = textarea.value.length;
+  counter.textContent = n + " / " + CONFIG.maxLength;
+  counter.classList.toggle("warn", n > 420 && n <= CONFIG.maxLength);
+  counter.classList.toggle("over", n > CONFIG.maxLength);
+});
+
+/* ---- render feed ---- */
+function render() {
+  const list = CONFESSIONS.filter((c) => c.cat === activeCat);
+  $("feedCount").textContent =
+    list.length + (list.length === 1 ? " message" : " messages");
+
+  if (!list.length) {
+    feed.innerHTML =
+      '<div class="empty">No messages in this category yet.<br>Be the first.</div>';
+    return;
+  }
+
+  const sorted = [...list].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  feed.innerHTML = sorted
+    .map((c) => {
+      return (
+        '<article class="post">' +
+          "<p>" + esc(c.text) + "</p>" +
+          "<footer>" +
+            '<span class="badge" data-t="' + esc(c.cat) + '">' + esc(c.cat) + "</span>" +
+            "<span>· " + esc(fmtDate(c.date)) + "</span>" +
+          "</footer>" +
+        "</article>"
+      );
+    })
+    .join("");
+}
+
+/* ---- submit ---- */
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const text = textarea.value.trim();
+
+  if (text.length < 10) {
+    toast("Write a little more — at least 10 characters.", "err");
+    textarea.focus();
+    return;
+  }
+  if (text.length > CONFIG.maxLength) {
+    toast("That's too long. Trim it to 500 characters.", "err");
+    return;
+  }
+  if (CONFIG.formEndpoint.includes("YOUR_FORM_ID")) {
+    toast("Form not connected yet — add your Formspree endpoint.", "err");
+    return;
+  }
+
+  sendBtn.disabled = true;
+  sendBtn.textContent = "Sending…";
+
+  const data = new FormData();
+  data.append("category", activeCat);
+  data.append("message", text);
+  data.append("_gotcha", form.querySelector('[name="_gotcha"]').value);
+
+  try {
+    const res = await fetch(CONFIG.formEndpoint, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      body: data
+    });
+
+    if (!res.ok) throw new Error("bad");
+
+    form.reset();
+    counter.textContent = "0 / " + CONFIG.maxLength;
+    counter.classList.remove("warn", "over");
+    toast("Sent. It'll be posted after review. 🖤", "ok");
+  } catch {
+    toast("Couldn't send — check your connection and try again.", "err");
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Send anonymous message";
+  }
+});
+
+/* ---- instagram ---- */
+$("igLink").href = CONFIG.instagram;
+
+/* ---- boot: set handle + first render ---- */
+document.querySelector(".handle").textContent = CONFIG.handle;
+render();
+</script>
+</body>
+  </html>
